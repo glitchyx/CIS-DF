@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Certified Implementation Specialist – Data Foundations (CMDB and CSDM) Practice Test. Comprehensive practice questions covering all core exam objectives.">
+<title>CIS – Data Foundations Practice Test</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🗄️</text></svg>">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Sora:wght@300;400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<!-- Glow orbs (dark theme only) -->
+<div class="glow-orb glow-orb-1"></div>
+<div class="glow-orb glow-orb-2"></div>
+
+<!-- ═══ STICKY SCORE BAR ═══ -->
+<div class="sticky-score" id="sticky-score">
+  <div class="brand">CIS – Data Foundations</div>
+  <div class="score-chips">
+    <div class="s-chip chip-answered">
+      <div class="sv" id="sc-answered">0</div>
+      <div class="sl">Done</div>
+    </div>
+    <div class="s-chip chip-correct">
+      <div class="sv" id="sc-correct">0</div>
+      <div class="sl">✓</div>
+    </div>
+    <div class="s-chip chip-wrong">
+      <div class="sv" id="sc-wrong">0</div>
+      <div class="sl">✗</div>
+    </div>
+    <div class="s-chip chip-pct">
+      <div class="sv" id="sc-pct">—</div>
+      <div class="sl">Score</div>
+    </div>
+    <div class="s-chip chip-remain">
+      <div class="sv" id="sc-remain">164</div>
+      <div class="sl">Left</div>
+    </div>
+  </div>
+  <div class="sticky-progress">
+    <div class="sticky-progress-fill" id="sticky-prog-fill" style="width:0%"></div>
+  </div>
+</div>
+
+<!-- ═══ MAIN CONTAINER ═══ -->
+<div class="container">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-badge">ServiceNow Certification Prep</div>
+    <h1>Certified Implementation Specialist<br>Data Foundations (CMDB and CSDM)</h1>
+    <p>Comprehensive practice questions covering all core exam objectives — CMDB, CSDM, IRE, Data Manager, Health Dashboard, Service Mapping and more.</p>
+    <div class="exam-meta">
+      <span>Practice Mode:</span> All 164 questions, instant feedback &nbsp;|&nbsp;
+      <span>Exam Mode:</span> 75 random questions, 90 min timer
+    </div>
+  </div>
+
+  <!-- Controls bar -->
+  <div class="controls-bar">
+    <!-- Mode -->
+    <div class="ctrl-group">
+      <span class="ctrl-label">Mode</span>
+      <button class="ctrl-btn mode-btn active" data-mode="practice" onclick="app.setMode('practice')">📚 Practice</button>
+      <button class="ctrl-btn mode-btn" data-mode="exam" onclick="app.setMode('exam')">🎯 Exam</button>
+    </div>
+
+    <!-- Font size -->
+    <div class="ctrl-group">
+      <span class="ctrl-label">Font</span>
+      <button class="font-btn" onclick="app.changeFontScale(-0.1)" title="Decrease font">A-</button>
+      <button class="font-btn" onclick="app.changeFontScale(0.1)" title="Increase font">A+</button>
+    </div>
+
+    <!-- Theme -->
+    <div class="ctrl-group">
+      <span class="ctrl-label">Theme</span>
+      <button class="theme-btn" id="theme-btn" onclick="app.setTheme()" title="Toggle theme">☀️</button>
+    </div>
+  </div>
+
+  <!-- Timer (exam mode only) -->
+  <div class="timer-bar" id="timer-bar" style="display:none">
+    <span class="timer-icon">⏱️</span>
+    <div class="timer-display" id="timer-display">90:00</div>
+    <div class="timer-label">remaining — Exam Mode (75 questions)</div>
+  </div>
+
+  <!-- Jump to question -->
+  <div class="jump-bar">
+    <label for="jump-input">Jump to Q#</label>
+    <input type="number" id="jump-input" class="jump-input" min="1" placeholder="e.g. 42">
+    <button class="jump-go" onclick="app.jumpToQuestion()">Go</button>
+    <span class="jump-status" id="jump-status"></span>
+  </div>
+
+  <!-- Section filter -->
+  <div class="section-filter">
+    <span class="section-filter-label">Filter by section</span>
+    <div class="section-filter-btns" id="section-filter-btns">
+      <!-- Built dynamically by app.js -->
+    </div>
+  </div>
+
+  <!-- Answer state filter -->
+  <div class="filter-bar">
+    <button class="filter-btn active" data-filter="all" onclick="app.setAnswerFilter('all')">All</button>
+    <button class="filter-btn" data-filter="unanswered" onclick="app.setAnswerFilter('unanswered')">⬜ Unanswered</button>
+    <button class="filter-btn" data-filter="wrong" onclick="app.setAnswerFilter('wrong')">❌ Incorrect</button>
+    <button class="filter-btn" data-filter="correct" onclick="app.setAnswerFilter('correct')">✅ Correct</button>
+  </div>
+
+  <!-- Quiz questions go here -->
+  <div id="quiz-container"></div>
+
+  <!-- Results screen -->
+  <div id="results-screen">
+    <h2>Test Complete!</h2>
+    <div class="final-score-ring" id="score-ring">
+      <div class="pct" id="final-pct">—</div>
+      <div class="sublbl">Score</div>
+    </div>
+    <div class="result-grid">
+      <div class="result-chip"><div class="rv" id="r-total" style="color:var(--accent)">0</div><div class="rl">Total</div></div>
+      <div class="result-chip"><div class="rv" id="r-correct" style="color:var(--correct)">0</div><div class="rl">Correct</div></div>
+      <div class="result-chip"><div class="rv" id="r-wrong" style="color:var(--incorrect)">0</div><div class="rl">Wrong</div></div>
+      <div class="result-chip"><div class="rv" id="r-pass" style="color:var(--warn)">—</div><div class="rl">Result</div></div>
+    </div>
+    <p class="result-msg" id="result-msg"></p>
+
+    <!-- Section breakdown -->
+    <div class="section-breakdown">
+      <h3>📊 Performance by Section</h3>
+      <div id="section-breakdown-rows"></div>
+    </div>
+
+    <div style="margin-top:16px">
+      <button class="restart-btn" onclick="app.restartTest()">↺ Retake Test</button>
+      <button class="share-btn" onclick="app.shareScore()">📋 Share Score</button>
+    </div>
+  </div>
+
+</div><!-- /container -->
+
+<!-- ═══ BOTTOM NAV BAR ═══ -->
+<div class="nav-bar">
+  <button class="nav-btn" onclick="app.scrollToTop()">↑ Top</button>
+  <button class="nav-btn" onclick="app.scrollToNext()">↓ Next Unanswered</button>
+  <button class="nav-btn danger" onclick="app.restartTest()">↺ Restart</button>
+  <button class="nav-btn primary" id="finish-nav-btn" style="display:none" onclick="app.showResults()">✓ Finish &amp; Score</button>
+</div>
+
+<!-- Scripts -->
+<script src="data/questions.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
