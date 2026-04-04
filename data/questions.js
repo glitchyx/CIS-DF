@@ -201,5 +201,65 @@ const QUESTIONS = [
   {id:161,section:"CMDB Data Ingestion",text:"Drag and drop the product to its description: 'Facilitates integration between ServiceNow and external systems to import and synchronize data'",type:"single",options:["ServiceNow Discovery","Service Graph Connectors","Agent Client Collector (ACC)","Service Mapping"],correct:[1],explanation:"Service Graph Connectors facilitate integration between ServiceNow and external systems to import and synchronize data into the CMDB from third-party tools."},
   {id:162,section:"CMDB Data Ingestion",text:"A manufacturing organization has implemented Incident Management and wants to integrate additional products. Which product 'Delivers asset actions and events for the management and maintenance of assets during incidents'?",type:"single",options:["Hardware Asset Management","Risk Management","Discovery","Service Portfolio Management"],correct:[0],explanation:"Hardware Asset Management delivers asset actions and events for managing assets during incidents — enabling asset-aware incident handling."},
   {id:163,section:"CMDB Data Ingestion",text:"What are the characteristics or functions of ServiceNow IntegrationHub ETL? (Choose 2)",type:"multi",options:["Uses the IRE to process and integrate data","Integrates third-party data into the CMDB or into non-CMDB tables","Performs discovery data collection and updates the CMDB","Imports Microsoft SCCM/Intune data into the CMDB"],correct:[0,1],explanation:"IntegrationHub ETL (A) uses the IRE to process and properly integrate imported data, ensuring deduplication and reconciliation, and (B) can integrate third-party data into both CMDB tables and non-CMDB tables."},
-  {id:164,section:"CMDB Data Ingestion",text:"Where to obtain the CMDB and CSDM Data Foundations Dashboard?",type:"single",options:["It is a paid application on the ServiceNow Store","It is a free application on the ServiceNow Innovation Lab","It is active by default","It is a free application on the ServiceNow Store"],correct:[3],explanation:"Both the CMDB Data Foundation Dashboard and CSDM Data Foundation Dashboard are free applications available on the ServiceNow Store. They are not active by default and need to be installed."}
+  {id:164,section:"CMDB Data Ingestion",text:"Where to obtain the CMDB and CSDM Data Foundations Dashboard?",type:"single",options:["It is a paid application on the ServiceNow Store","It is a free application on the ServiceNow Innovation Lab","It is active by default","It is a free application on the ServiceNow Store"],correct:[3],explanation:"Both the CMDB Data Foundation Dashboard and CSDM Data Foundation Dashboard are free applications available on the ServiceNow Store. They are not active by default and need to be installed."},
+  {id:165,section:"Matching: Application Services",text:"Match each application service type to its best description.",type:"match",
+  pairs:[
+    {left:"Service Mapping (Top-down)",right:"Recommended for mission-critical application services that require a precise approach using patterns"},
+    {left:"Tag-Based",right:"Best fit to map cloud-native, container-based, or virtual machine environments"},
+    {left:"Service Mapping (Connection Suggestion)",right:"Ideal for custom-built applications and leverages application fingerprinting to generate service maps in a timely manner"},
+    {left:"Dynamic CI Group",right:"Ideal for small application services that can be easily grouped using filters and CMDB queries"}
+  ],
+  explanation:"Service Mapping Top-down uses discovery patterns for precision on mission-critical apps. Tag-Based suits dynamic cloud/container environments. Connection Suggestion uses fingerprinting for custom apps. Dynamic CI Group is simplest — filter-based grouping for small services."},
+  {id:166,section:"Matching: Duplicate CI Management",text:"A CMDB Administrator seeks to understand the available tools for preventing, addressing, and remediating duplicate CIs. Match each feature with its corresponding outcome. (Some options may not apply)",type:"match",
+  pairs:[
+    {left:"Certification Tasks",right:"Can be assigned to groups for resolving duplicate CIs"},
+    {left:"De-Duplication Templates",right:"Offers insight into duplicate CIs within the CMDB"},
+    {left:"De-Duplication Tasks",right:"Offers a solution to resolve de-duplication tasks in bulk"},
+    {left:"Duplicate CI Remediator",right:"Provides a wizard to resolve de-duplication tasks individually"}
+  ],
+  explanation:"Certification Tasks are assignable to groups for governance. De-Duplication Templates give visibility/insight into duplicates. De-Duplication Tasks handle bulk resolution. Duplicate CI Remediator is a step-by-step wizard for individual task resolution."},
+
+  {id:167,section:"Matching: CSDM Domains",text:"An Enterprise Architect needs to help the CMDB owner understand the benefits of CSDM. Match each CSDM domain to its respective benefit.",type:"match",
+  pairs:[
+    {left:"Foundation",right:"Understand CIs related to business application and related capabilities to identify redundancies, monitor costs and make better investment decisions around roadmap"},
+    {left:"Design and Planning",right:"Understand technical services, technical service offerings, service support and all relationships to underlying technology CIs"},
+    {left:"Service Consumption",right:"Understand business services and ownership, cost, scope of what is offered to the business/consumer and request access to the business services"},
+    {left:"Service Delivery",right:"Use the base system tables when implementing the CSDM to derive the highest value from ServiceNow products and the Now Platform"}
+  ],
+  explanation:"Foundation = business application CI understanding and investment decisions. Design and Planning = technical services and their relationships. Service Consumption = business service ownership and consumer access. Service Delivery = base system tables and platform value."},
+
+  {id:168,section:"Matching: CMDB Health Dashboard",text:"The CMDB Health Dashboard is based on three KPIs: Correctness, Compliance, and Completeness. Match each sub-metric to its KPI.",type:"match",
+  pairs:[
+    {left:"Required",right:"Completeness"},
+    {left:"Audit",right:"Compliance"},
+    {left:"Orphan",right:"Correctness"}
+  ],
+  explanation:"Completeness tracks whether required and recommended fields are populated — hence 'Required' belongs here. Compliance tracks certification and audit activity — 'Audit' belongs here. Correctness tracks data accuracy including orphan, stale, and duplicate CIs — 'Orphan' belongs here."},
+
+  {id:169,section:"Matching: CMDB Data Ingestion",text:"Match each ServiceNow product to its description.",type:"match",
+  pairs:[
+    {left:"ServiceNow Discovery",right:"Automatically identifies devices and applications in the network, populating the CMDB with accurate and up-to-date information"},
+    {left:"Service Graph Connectors",right:"Facilitates integration between ServiceNow and external systems to import and synchronize data"},
+    {left:"Agent Client Collector (ACC)",right:"Completes topology of the services and shows how they are supported by underlying infrastructure and applications"},
+    {left:"Service Mapping",right:"Provides real-time visibility into endpoint configurations, populating the CMDB with accurate and up-to-date information"}
+  ],
+  explanation:"Discovery = agentless network scanning. Service Graph Connectors = pre-built third-party integrations. ACC = agent-based topology for devices that can't be reached by agentless discovery. Service Mapping = real-time service topology visibility."},
+
+  {id:170,section:"Matching: CMDB 360 & Multisource",text:"A CMDB Administrator needs to set up CMDB 360/Multisource CMDB. Match each system property to its functionality.",type:"match",
+  pairs:[
+    {left:"Enables CMDB 360",right:"glide.identification_engine.multisource_enabled"},
+    {left:"Enables capturing CMDB 360 data for CIs from CMDB classes",right:"glide.identification_engine.multisource_cmdb_ci_enabled"},
+    {left:"Enables logging for CMDB 360",right:"glide.cmdb.logger.source.cmdb_multisource"},
+    {left:"Maximum number of CIs that can be included in a CMDB 360 recompute operation",right:"glide.identification_engine.multisource.recompute.max.ci.limit"}
+  ],
+  explanation:"multisource_enabled = master switch for CMDB 360. multisource_cmdb_ci_enabled = enables data capture per CI from CMDB classes. cmdb_multisource logger = controls logging. recompute.max.ci.limit = caps the number of CIs processed in one recompute job."},
+
+  {id:171,section:"Matching: CMDB Data Ingestion",text:"ServiceNow provides a suite of CMDB management tools designed to effectively ingest, manage, and maintain CIs and relationships. Match each design architecture to its management tool.",type:"match",
+  pairs:[
+    {left:"Automated agent-based solution running patterns",right:"Agent Client Collector"},
+    {left:"Organization-built solution using transform maps",right:"Import Sets"},
+    {left:"Pre-built store integration solutions that require minimal customization",right:"Service Graph Connector"},
+    {left:"Automated agentless solution running patterns",right:"ServiceNow Discovery"}
+  ],
+  explanation:"ACC = agent-based (software installed on endpoint). Import Sets = custom transform maps built by the org. Service Graph Connector = pre-built store solutions, minimal setup. Discovery = agentless, runs patterns automatically across the network."}
 ];
