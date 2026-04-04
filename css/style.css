@@ -687,3 +687,193 @@ body{
   .sb-row{font-size:11px;}
   .sb-bar-wrap{width:80px;}
 }
+/* ─── Match Question Styles ─── */
+/* Append these rules to the END of your existing style.css */
+
+.match-container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+/* Left column — the rows to match */
+.match-left-col {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.match-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  flex-wrap: wrap;
+}
+
+.match-row:hover {
+  border-color: var(--accent);
+}
+
+.match-row-active {
+  border-color: var(--accent) !important;
+  background: rgba(0, 201, 255, 0.06) !important;
+}
+
+.match-row-correct {
+  border-color: var(--correct) !important;
+  background: rgba(0, 229, 160, 0.06) !important;
+  cursor: default;
+}
+
+.match-row-wrong {
+  border-color: var(--incorrect) !important;
+  background: rgba(255, 77, 109, 0.06) !important;
+  cursor: default;
+}
+
+.match-left {
+  font-size: calc(13px * var(--font-scale));
+  font-weight: 600;
+  color: var(--text);
+  min-width: 160px;
+  flex: 0 0 auto;
+}
+
+.match-arrow {
+  color: var(--text-muted);
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.match-right-slot {
+  flex: 1;
+  min-width: 120px;
+  font-size: calc(12px * var(--font-scale));
+  line-height: 1.5;
+}
+
+.match-slot-placeholder {
+  color: var(--text-muted);
+  font-style: italic;
+  font-size: 11px;
+}
+
+.match-slot-filled {
+  color: var(--accent);
+  font-size: calc(12px * var(--font-scale));
+}
+
+.match-slot-correct {
+  color: var(--correct);
+  font-size: calc(12px * var(--font-scale));
+}
+
+.match-slot-wrong {
+  color: var(--incorrect);
+  display: block;
+  font-size: calc(12px * var(--font-scale));
+  text-decoration: line-through;
+  opacity: 0.8;
+}
+
+.match-slot-correct-ans {
+  color: var(--correct);
+  display: block;
+  font-size: calc(12px * var(--font-scale));
+  margin-top: 4px;
+}
+
+/* Right pool — the answers to click */
+.match-right-pool {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.match-pool-label {
+  font-family: 'Space Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+
+.match-right-btn {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 9px 13px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font-size: calc(12px * var(--font-scale));
+  font-family: 'Sora', sans-serif;
+  line-height: 1.5;
+  cursor: pointer;
+  transition: all 0.18s;
+}
+
+.match-right-btn:hover:not(:disabled) {
+  border-color: var(--accent2);
+  background: rgba(123, 97, 255, 0.07);
+  transform: translateX(2px);
+}
+
+.match-right-btn:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+.match-btn-pending {
+  border-color: var(--accent2) !important;
+  background: rgba(123, 97, 255, 0.1) !important;
+}
+
+.match-btn-assigned {
+  opacity: 0.4;
+  border-style: dashed;
+}
+
+/* Instructions hint */
+.match-hint {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+  padding: 7px 12px;
+  background: rgba(123, 97, 255, 0.06);
+  border: 1px solid rgba(123, 97, 255, 0.15);
+  border-radius: 6px;
+  font-style: italic;
+}
+
+/* Mobile adjustments */
+@media (max-width: 600px) {
+  .match-left {
+    min-width: 100%;
+    margin-bottom: 4px;
+  }
+  .match-arrow {
+    display: none;
+  }
+  .match-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .match-right-slot {
+    width: 100%;
+    padding-left: 0;
+  }
+}
