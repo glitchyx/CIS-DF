@@ -1,13 +1,12 @@
 // app.js — Main application logic for CIS-CMDB Practice Test
-// Handles: state, localStorage, modes, rendering, scoring, timer, match questions
 
 // ─── State ───────────────────────────────────────────────────────────────────
 let state = {
   answered: {},
   scores: { correct: 0, wrong: 0 },
   multiSelections: {},
-  matchSelections: {},   // { qId: { leftIdx: rightIdx|null } }
-  matchAnswered: {},     // { qId: { leftIdx: rightIdx } } — final submitted
+  matchSelections: {},
+  matchAnswered: {},
   mode: 'practice',
   theme: 'dark',
   fontScale: 1,
@@ -23,6 +22,10 @@ const STORAGE_KEY = 'cmdb_exam_state_v3';
 const EXAM_TIME = 90 * 60;
 const EXAM_Q_COUNT = 75;
 const letters = 'ABCDEFGHIJKLMNO';
+
+// Track which left row is currently selected (waiting for a right click)
+// keyed by qid
+const matchPending = {};
 
 // ─── Persistence ─────────────────────────────────────────────────────────────
 function saveState() {
@@ -79,19 +82,12 @@ function getActiveQuestions() {
   return QUESTIONS;
 }
 
-function getDisplayQuestions() {
-  let qs = getActiveQuestions();
-  if (state.sectionFilter !== 'all') qs = qs.filter(q => q.section === state.sectionFilter);
-  if (state.answerFilter === 'unanswered') qs = qs.filter(q => !state.answered[q.id]);
-  else if (state.answerFilter === 'correct') qs = qs.filter(q => state.answered[q.id] === 'correct');
-  else if (state.answerFilter === 'wrong') qs = qs.filter(q => state.answered[q.id] === 'wrong');
-  return qs;
-}
-
 function getUniqueSections() {
   const seen = new Set();
   const sections = [];
-  QUESTIONS.forEach(q => { if (!seen.has(q.section)) { seen.add(q.section); sections.push(q.section); }});
+  QUESTIONS.forEach(q => {
+    if (!seen.has(q.section)) { seen.add(q.section); sections.push(q.section); }
+  });
   return sections;
 }
 
@@ -127,8 +123,7 @@ function startTimer() {
     state.timerSeconds++;
     updateTimerDisplay();
     saveState();
-    const remaining = EXAM_TIME - state.timerSeconds;
-    if (remaining <= 0) { stopTimer(); autoFinish(); }
+    if (EXAM_TIME - state.timerSeconds <= 0) { stopTimer(); autoFinish(); }
   }, 1000);
 }
 
@@ -139,8 +134,9 @@ function stopTimer() {
 function updateTimerDisplay() {
   const el = document.getElementById('timer-display');
   if (!el) return;
-  if (state.mode !== 'exam') { el.closest('.timer-bar').style.display = 'none'; return; }
-  el.closest('.timer-bar').style.display = 'flex';
+  const bar = el.closest('.timer-bar');
+  if (state.mode !== 'exam') { if (bar) bar.style.display = 'none'; return; }
+  if (bar) bar.style.display = 'flex';
   const remaining = Math.max(0, EXAM_TIME - state.timerSeconds);
   const m = Math.floor(remaining / 60).toString().padStart(2, '0');
   const s = (remaining % 60).toString().padStart(2, '0');
@@ -219,7 +215,7 @@ function render() {
     });
   });
 
-  // Restore answered states
+  // Restore answered states visually
   activeQs.forEach(q => {
     if (state.answered[q.id]) restoreCardState(q);
   });
@@ -229,9 +225,8 @@ function render() {
   updateTimerDisplay();
 
   if (state.mode === 'exam' && state.examStarted) {
-    const activeQs2 = getActiveQuestions();
-    const answeredCount = activeQs2.filter(q2 => state.answered[q2.id]).length;
-    if (answeredCount < activeQs2.length) startTimer();
+    const qs = getActiveQuestions();
+    if (qs.filter(q => state.answered[q.id]).length < qs.length) startTimer();
   }
 }
 
@@ -250,6 +245,7 @@ function buildCard(q, num) {
       state.matchSelections[q.id] = {};
       q.pairs.forEach((_, i) => { state.matchSelections[q.id][i] = null; });
     }
+    matchPending[q.id] = null;
   } else if (q.type === 'multi') {
     typeLabel = 'Choose Multiple';
     bodyHTML = buildMultiBody(q);
@@ -293,33 +289,32 @@ function buildMultiBody(q) {
     </div>`;
 }
 
+// ─── Match body builder ───────────────────────────────────────────────────────
 function buildMatchBody(q) {
   // Shuffle right side for display
-  const rightItems = q.pairs.map((p, i) => ({ text: p.right, pairIdx: i }))
-    .sort(() => Math.random() - 0.5);
+  const rightOrder = q.pairs.map((_, i) => i).sort(() => Math.random() - 0.5);
 
-  // Store shuffle order so we can restore it
-  // We use a stable element ID keyed by pairIdx
   const leftRows = q.pairs.map((p, i) =>
-    `<div class="match-row" id="match-row-${q.id}-${i}">
-      <div class="match-left" id="match-left-${q.id}-${i}">${p.left}</div>
+    `<div class="match-row" id="match-row-${q.id}-${i}" onclick="app.clickLeft(${q.id},${i})">
+      <div class="match-left">${p.left}</div>
       <div class="match-arrow">→</div>
       <div class="match-right-slot" id="match-slot-${q.id}-${i}">
-        <span class="match-slot-placeholder">Select a match</span>
+        <span class="match-slot-placeholder">click here or select below</span>
       </div>
     </div>`
   ).join('');
 
-  const rightBtns = rightItems.map(item =>
-    `<button class="match-right-btn" id="match-rbtn-${q.id}-${item.pairIdx}"
-      onclick="app.selectMatchRight(${q.id},${item.pairIdx})">${item.text}</button>`
+  const rightBtns = rightOrder.map(pairIdx =>
+    `<button class="match-right-btn" id="match-rbtn-${q.id}-${pairIdx}"
+      onclick="app.clickRight(${q.id},${pairIdx})">${q.pairs[pairIdx].right}</button>`
   ).join('');
 
   return `
+    <div class="match-hint">💡 Click a left row to select it (turns blue), then click the matching answer below — or click an answer first, then the row.</div>
     <div class="match-container" id="match-${q.id}">
       <div class="match-left-col">${leftRows}</div>
       <div class="match-right-pool" id="match-pool-${q.id}">
-        <div class="match-pool-label">Click to assign ↓</div>
+        <div class="match-pool-label">▼ Click an answer to assign it</div>
         ${rightBtns}
       </div>
     </div>
@@ -328,88 +323,80 @@ function buildMatchBody(q) {
     </div>`;
 }
 
-// ─── Match interaction ────────────────────────────────────────────────────────
-// State: matchSelections[qid] = { leftIdx: rightIdx|null }
-// selectedLeft[qid] = leftIdx currently selected (waiting for right click)
-const selectedLeft = {};
-
-function selectMatchLeft(qid, leftIdx) {
-  if (state.answered[qid]) return;
-  // Toggle selection
-  if (selectedLeft[qid] === leftIdx) {
-    selectedLeft[qid] = null;
-    document.querySelectorAll(`#match-${qid} .match-row`).forEach(r => r.classList.remove('match-row-active'));
-    return;
-  }
-  selectedLeft[qid] = leftIdx;
-  document.querySelectorAll(`#match-${qid} .match-row`).forEach(r => r.classList.remove('match-row-active'));
-  document.getElementById(`match-row-${qid}-${leftIdx}`).classList.add('match-row-active');
-}
-
-function selectMatchRight(qid, rightPairIdx) {
+// ─── Match click handlers ─────────────────────────────────────────────────────
+function clickLeft(qid, leftIdx) {
   if (state.answered[qid]) return;
   const q = QUESTIONS.find(q => q.id === qid);
+  const pending = matchPending[qid];
+
+  if (pending !== null && pending !== undefined && typeof pending === 'number') {
+    // A right answer was clicked first — assign it to this left row
+    assignMatch(qid, q, leftIdx, pending);
+    matchPending[qid] = null;
+    clearPendingHighlights(qid, q);
+  } else {
+    // Select/deselect this left row
+    const alreadySelected = (pending === `left:${leftIdx}`);
+    clearPendingHighlights(qid, q);
+    if (alreadySelected) {
+      matchPending[qid] = null;
+    } else {
+      matchPending[qid] = `left:${leftIdx}`;
+      const row = document.getElementById(`match-row-${qid}-${leftIdx}`);
+      if (row) row.classList.add('match-row-active');
+    }
+  }
+}
+
+function clickRight(qid, rightPairIdx) {
+  if (state.answered[qid]) return;
+  const q = QUESTIONS.find(q => q.id === qid);
+  const pending = matchPending[qid];
+
+  if (pending !== null && pending !== undefined &&
+      typeof pending === 'string' && pending.startsWith('left:')) {
+    // A left row was clicked first — assign this right to it
+    const leftIdx = parseInt(pending.replace('left:', ''));
+    assignMatch(qid, q, leftIdx, rightPairIdx);
+    matchPending[qid] = null;
+    clearPendingHighlights(qid, q);
+  } else {
+    // Select/deselect this right answer
+    const alreadySelected = (pending === rightPairIdx);
+    clearPendingHighlights(qid, q);
+    if (alreadySelected) {
+      matchPending[qid] = null;
+    } else {
+      matchPending[qid] = rightPairIdx;
+      const btn = document.getElementById(`match-rbtn-${qid}-${rightPairIdx}`);
+      if (btn) btn.classList.add('match-btn-pending');
+    }
+  }
+}
+
+function assignMatch(qid, q, leftIdx, rightPairIdx) {
   if (!state.matchSelections[qid]) {
     state.matchSelections[qid] = {};
     q.pairs.forEach((_, i) => { state.matchSelections[qid][i] = null; });
   }
-
-  // Find if this rightPairIdx is already assigned somewhere — unassign it
+  // Unassign this right from any other left
   Object.keys(state.matchSelections[qid]).forEach(li => {
     if (state.matchSelections[qid][li] === rightPairIdx) {
       state.matchSelections[qid][li] = null;
     }
   });
-
-  // If a left is selected, assign
-  if (selectedLeft[qid] !== null && selectedLeft[qid] !== undefined) {
-    const li = selectedLeft[qid];
-    state.matchSelections[qid][li] = rightPairIdx;
-    selectedLeft[qid] = null;
-    document.querySelectorAll(`#match-${qid} .match-row`).forEach(r => r.classList.remove('match-row-active'));
-  } else {
-    // No left selected — highlight the right button as "pending"
-    document.querySelectorAll(`#match-pool-${qid} .match-right-btn`).forEach(b => b.classList.remove('match-btn-pending'));
-    document.getElementById(`match-rbtn-${qid}-${rightPairIdx}`).classList.add('match-btn-pending');
-    // Store pending right
-    selectedLeft[qid] = `right:${rightPairIdx}`;
-    return;
-  }
-
-  // Handle pending right selection (right clicked first, then left)
-  if (typeof selectedLeft[qid] === 'string' && selectedLeft[qid].startsWith('right:')) {
-    // Already handled above — this path won't hit
-  }
-
+  state.matchSelections[qid][leftIdx] = rightPairIdx;
   refreshMatchDisplay(qid, q);
   checkMatchSubmitReady(qid, q);
 }
 
-// Alternative: clicking the LEFT row directly
-function clickMatchRow(qid, leftIdx) {
-  if (state.answered[qid]) return;
-  // If there's a pending right, assign it
-  const pending = selectedLeft[qid];
-  if (typeof pending === 'string' && pending.startsWith('right:')) {
-    const rightPairIdx = parseInt(pending.replace('right:', ''));
-    const q = QUESTIONS.find(q => q.id === qid);
-    if (!state.matchSelections[qid]) {
-      state.matchSelections[qid] = {};
-      q.pairs.forEach((_, i) => { state.matchSelections[qid][i] = null; });
-    }
-    // Unassign this right from anywhere else
-    Object.keys(state.matchSelections[qid]).forEach(li => {
-      if (state.matchSelections[qid][li] === rightPairIdx) state.matchSelections[qid][li] = null;
-    });
-    state.matchSelections[qid][leftIdx] = rightPairIdx;
-    selectedLeft[qid] = null;
-    document.querySelectorAll(`#match-pool-${qid} .match-right-btn`).forEach(b => b.classList.remove('match-btn-pending'));
-    document.querySelectorAll(`#match-${qid} .match-row`).forEach(r => r.classList.remove('match-row-active'));
-    refreshMatchDisplay(qid, q);
-    checkMatchSubmitReady(qid, q);
-  } else {
-    selectMatchLeft(qid, leftIdx);
-  }
+function clearPendingHighlights(qid, q) {
+  q.pairs.forEach((_, i) => {
+    const row = document.getElementById(`match-row-${qid}-${i}`);
+    if (row) row.classList.remove('match-row-active');
+    const btn = document.getElementById(`match-rbtn-${qid}-${i}`);
+    if (btn) btn.classList.remove('match-btn-pending');
+  });
 }
 
 function refreshMatchDisplay(qid, q) {
@@ -421,11 +408,9 @@ function refreshMatchDisplay(qid, q) {
     if (assignedRight !== null && assignedRight !== undefined) {
       slot.innerHTML = `<span class="match-slot-filled">${q.pairs[assignedRight].right}</span>`;
     } else {
-      slot.innerHTML = `<span class="match-slot-placeholder">Select a match</span>`;
+      slot.innerHTML = `<span class="match-slot-placeholder">click here or select below</span>`;
     }
   });
-
-  // Grey out assigned right buttons
   q.pairs.forEach((_, ri) => {
     const btn = document.getElementById(`match-rbtn-${qid}-${ri}`);
     if (!btn) return;
@@ -445,18 +430,13 @@ function submitMatch(qid) {
   if (state.answered[qid]) return;
   const q = QUESTIONS.find(q => q.id === qid);
   const sel = state.matchSelections[qid] || {};
-
-  // Check: each leftIdx should map to the same pairIdx (i.e., sel[i] === i for correct)
   let allCorrect = true;
-  q.pairs.forEach((_, i) => {
-    if (sel[i] !== i) allCorrect = false;
-  });
-
+  q.pairs.forEach((_, i) => { if (sel[i] !== i) allCorrect = false; });
   state.matchAnswered[qid] = { ...sel };
   finalizeAnswer(qid, q, null, allCorrect, 'match');
 }
 
-// ─── Answer handlers ──────────────────────────────────────────────────────────
+// ─── Single & Multi handlers ──────────────────────────────────────────────────
 function toggleMulti(qid, idx) {
   if (state.answered[qid]) return;
   if (!state.multiSelections[qid]) state.multiSelections[qid] = [];
@@ -484,8 +464,8 @@ function toggleMulti(qid, idx) {
 function submitMulti(qid) {
   if (state.answered[qid]) return;
   const q = QUESTIONS.find(q => q.id === qid);
-  const sel = [...(state.multiSelections[qid] || [])].sort((a,b)=>a-b);
-  const correct = [...q.correct].sort((a,b)=>a-b);
+  const sel = [...(state.multiSelections[qid] || [])].sort((a, b) => a - b);
+  const correct = [...q.correct].sort((a, b) => a - b);
   const isCorrect = JSON.stringify(sel) === JSON.stringify(correct);
   finalizeAnswer(qid, q, sel, isCorrect, 'multi');
 }
@@ -497,13 +477,13 @@ function selectSingle(qid, idx) {
   finalizeAnswer(qid, q, [idx], isCorrect, 'single');
 }
 
+// ─── Finalize answer ──────────────────────────────────────────────────────────
 function finalizeAnswer(qid, q, selected, isCorrect, type) {
   state.answered[qid] = isCorrect ? 'correct' : 'wrong';
   if (isCorrect) state.scores.correct++; else state.scores.wrong++;
   applyAnswerStyles(qid, q, selected, isCorrect, type);
   updateScoreboard();
   saveState();
-
   if (state.mode === 'exam') {
     const activeQs = getActiveQuestions();
     if (activeQs.every(q2 => state.answered[q2.id])) stopTimer();
@@ -517,7 +497,7 @@ function applyAnswerStyles(qid, q, selected, isCorrect, type) {
   document.getElementById(`status-${qid}`).textContent = isCorrect ? '✅' : '❌';
 
   if (type === 'match') {
-    applyMatchStyles(qid, q, isCorrect);
+    applyMatchStyles(qid, q);
   } else {
     q.options.forEach((_, i) => {
       const opt = document.getElementById(`opt-${qid}-${i}`);
@@ -526,7 +506,7 @@ function applyAnswerStyles(qid, q, selected, isCorrect, type) {
       opt.style.borderColor = ''; opt.style.background = '';
       if (type === 'multi') {
         const chk = document.getElementById(`chk-${qid}-${i}`);
-        if (chk) { chk.innerHTML=''; chk.style.cssText=''; }
+        if (chk) { chk.innerHTML = ''; chk.style.cssText = ''; }
       }
       opt.className = q.correct.includes(i) ? 'option show-correct' : 'option';
       if (selected && selected.includes(i)) {
@@ -546,36 +526,30 @@ function applyAnswerStyles(qid, q, selected, isCorrect, type) {
   }
 }
 
-function applyMatchStyles(qid, q, isCorrect) {
+function applyMatchStyles(qid, q) {
   const sel = state.matchAnswered[qid] || state.matchSelections[qid] || {};
 
-  // Disable all right buttons
+  // Disable everything
   q.pairs.forEach((_, ri) => {
     const btn = document.getElementById(`match-rbtn-${qid}-${ri}`);
     if (btn) { btn.disabled = true; btn.onclick = null; }
   });
-
-  // Disable all left rows
   q.pairs.forEach((_, li) => {
     const row = document.getElementById(`match-row-${qid}-${li}`);
-    if (row) row.onclick = null;
+    if (row) { row.onclick = null; row.style.cursor = 'default'; }
   });
-
-  // Hide submit
   const wrap = document.getElementById(`submit-wrap-${qid}`);
   if (wrap) wrap.style.display = 'none';
 
-  // Show correct/incorrect per row
+  // Show results per row
   q.pairs.forEach((pair, li) => {
     const row = document.getElementById(`match-row-${qid}-${li}`);
     const slot = document.getElementById(`match-slot-${qid}-${li}`);
     if (!row || !slot) return;
-
     const assignedRight = sel[li];
-    const wasCorrect = assignedRight === li;
-
+    const wasCorrect = (assignedRight === li);
+    row.classList.remove('match-row-active');
     row.classList.add(wasCorrect ? 'match-row-correct' : 'match-row-wrong');
-
     if (wasCorrect) {
       slot.innerHTML = `<span class="match-slot-correct">✓ ${pair.right}</span>`;
     } else {
@@ -583,7 +557,7 @@ function applyMatchStyles(qid, q, isCorrect) {
         ? q.pairs[assignedRight].right : '(not answered)';
       slot.innerHTML = `
         <span class="match-slot-wrong">✗ ${givenText}</span>
-        <span class="match-slot-correct-ans">→ ${pair.right}</span>`;
+        <span class="match-slot-correct-ans">✓ ${pair.right}</span>`;
     }
   });
 }
@@ -597,13 +571,13 @@ function restoreCardState(q) {
   document.getElementById(`status-${q.id}`).textContent = wasCorrect ? '✅' : '❌';
 
   if (q.type === 'match') {
-    applyMatchStyles(q.id, q, wasCorrect);
+    applyMatchStyles(q.id, q);
   } else {
     q.options.forEach((_, i) => {
       const opt = document.getElementById(`opt-${q.id}-${i}`);
       if (opt) {
         opt.disabled = true;
-        if (q.correct.includes(i)) opt.className = 'option show-correct';
+        opt.className = q.correct.includes(i) ? 'option show-correct' : 'option';
       }
     });
     const wrap = document.getElementById(`submit-wrap-${q.id}`);
@@ -624,7 +598,8 @@ function setAnswerFilter(type) {
   state.answerFilter = type;
   saveState();
   document.querySelectorAll('.filter-btn').forEach(btn => {
-    btn.className = 'filter-btn' + (btn.dataset.filter === type ? (type === 'wrong' ? ' active-wrong' : ' active') : '');
+    btn.className = 'filter-btn' + (btn.dataset.filter === type
+      ? (type === 'wrong' ? ' active-wrong' : ' active') : '');
   });
   applyFilter();
 }
@@ -675,10 +650,11 @@ function jumpToQuestion() {
   }
   state.sectionFilter = 'all';
   state.answerFilter = 'all';
-  document.querySelectorAll('.sf-btn').forEach(b => b.className = 'sf-btn' + (b.dataset.section === 'all' ? ' active' : ''));
-  document.querySelectorAll('.filter-btn').forEach(b => b.className = 'filter-btn' + (b.dataset.filter === 'all' ? ' active' : ''));
+  document.querySelectorAll('.sf-btn').forEach(b =>
+    b.className = 'sf-btn' + (b.dataset.section === 'all' ? ' active' : ''));
+  document.querySelectorAll('.filter-btn').forEach(b =>
+    b.className = 'filter-btn' + (b.dataset.filter === 'all' ? ' active' : ''));
   applyFilter();
-
   const targetQ = activeQs[num - 1];
   const card = document.getElementById(`q-card-${targetQ.id}`);
   if (card) {
@@ -718,12 +694,12 @@ function setMode(mode) {
 }
 
 function applyModeUI() {
-  const isPractice = state.mode === 'practice';
   const container = document.getElementById('quiz-container');
-  if (container) container.className = isPractice ? '' : 'exam-mode';
+  if (container) container.className = state.mode === 'practice' ? '' : 'exam-mode';
   document.querySelectorAll('.mode-btn').forEach(btn => {
     const m = btn.dataset.mode;
-    btn.className = 'ctrl-btn mode-btn ' + (m === state.mode ? (m === 'exam' ? 'active-exam' : 'active') : '');
+    btn.className = 'ctrl-btn mode-btn ' +
+      (m === state.mode ? (m === 'exam' ? 'active-exam' : 'active') : '');
   });
   const timerBar = document.getElementById('timer-bar');
   if (timerBar) timerBar.style.display = state.mode === 'exam' ? 'flex' : 'none';
@@ -743,14 +719,11 @@ function showResults() {
   setText('r-wrong', state.scores.wrong);
   setText('r-pass', pass ? 'PASS ✅' : 'FAIL ❌');
   document.getElementById('r-pass').style.color = pass ? 'var(--correct)' : 'var(--incorrect)';
-
-  const ring = document.getElementById('score-ring');
-  ring.className = 'final-score-ring ' + (pass ? 'result-pass' : 'result-fail');
-
-  const msg = pass
+  document.getElementById('score-ring').className =
+    'final-score-ring ' + (pass ? 'result-pass' : 'result-fail');
+  setText('result-msg', pass
     ? `Outstanding! You scored ${state.scores.correct}/${total} (${pct}%) — above the 70% passing threshold. You're ready for the exam!`
-    : `You scored ${state.scores.correct}/${total} (${pct}%). The passing threshold is 70%. Use the ❌ filter to review incorrect questions, then retake.`;
-  setText('result-msg', msg);
+    : `You scored ${state.scores.correct}/${total} (${pct}%). The passing threshold is 70%. Use the ❌ filter to review incorrect questions, then retake.`);
 
   buildSectionBreakdown(activeQs);
 
@@ -783,17 +756,19 @@ function buildSectionBreakdown(activeQs) {
   const container = document.getElementById('section-breakdown-rows');
   if (!container) return;
   container.innerHTML = '';
-  Object.entries(sections).sort((a,b) => (a[1].correct/a[1].total) - (b[1].correct/b[1].total)).forEach(([name, data]) => {
-    const pct = data.total > 0 ? Math.round(data.correct / data.total * 100) : 0;
-    const color = pct >= 80 ? 'var(--correct)' : pct >= 60 ? 'var(--warn)' : 'var(--incorrect)';
-    const row = document.createElement('div');
-    row.className = 'sb-row';
-    row.innerHTML = `
-      <div class="sb-name">${name}</div>
-      <div class="sb-bar-wrap"><div class="sb-bar-fill" style="width:${pct}%;background:${color}"></div></div>
-      <div class="sb-score" style="color:${color}">${data.correct}/${data.total} (${pct}%)</div>`;
-    container.appendChild(row);
-  });
+  Object.entries(sections)
+    .sort((a, b) => (a[1].correct / a[1].total) - (b[1].correct / b[1].total))
+    .forEach(([name, data]) => {
+      const pct = data.total > 0 ? Math.round(data.correct / data.total * 100) : 0;
+      const color = pct >= 80 ? 'var(--correct)' : pct >= 60 ? 'var(--warn)' : 'var(--incorrect)';
+      const row = document.createElement('div');
+      row.className = 'sb-row';
+      row.innerHTML = `
+        <div class="sb-name">${name}</div>
+        <div class="sb-bar-wrap"><div class="sb-bar-fill" style="width:${pct}%;background:${color}"></div></div>
+        <div class="sb-score" style="color:${color}">${data.correct}/${data.total} (${pct}%)</div>`;
+      container.appendChild(row);
+    });
 }
 
 function restartTest() {
@@ -834,23 +809,22 @@ function showToast(msg) {
 // ─── Build static UI ──────────────────────────────────────────────────────────
 function buildStaticUI() {
   const sfContainer = document.getElementById('section-filter-btns');
-  if (sfContainer) {
-    sfContainer.innerHTML = '';
-    const allBtn = document.createElement('button');
-    allBtn.className = 'sf-btn active';
-    allBtn.dataset.section = 'all';
-    allBtn.textContent = `All (${QUESTIONS.length})`;
-    allBtn.onclick = () => setSectionFilter('all');
-    sfContainer.appendChild(allBtn);
-    getUniqueSections().forEach(sec => {
-      const btn = document.createElement('button');
-      btn.className = 'sf-btn';
-      btn.dataset.section = sec;
-      btn.textContent = sec;
-      btn.onclick = () => setSectionFilter(sec);
-      sfContainer.appendChild(btn);
-    });
-  }
+  if (!sfContainer) return;
+  sfContainer.innerHTML = '';
+  const allBtn = document.createElement('button');
+  allBtn.className = 'sf-btn active';
+  allBtn.dataset.section = 'all';
+  allBtn.textContent = `All (${QUESTIONS.length})`;
+  allBtn.onclick = () => setSectionFilter('all');
+  sfContainer.appendChild(allBtn);
+  getUniqueSections().forEach(sec => {
+    const btn = document.createElement('button');
+    btn.className = 'sf-btn';
+    btn.dataset.section = sec;
+    btn.textContent = sec;
+    btn.onclick = () => setSectionFilter(sec);
+    sfContainer.appendChild(btn);
+  });
 }
 
 // ─── Init ─────────────────────────────────────────────────────────────────────
@@ -870,11 +844,11 @@ function init() {
 
 // ─── Public API ───────────────────────────────────────────────────────────────
 window.app = {
+  selectSingle,
   toggleMulti,
   submitMulti,
-  selectSingle,
-  selectMatchRight,
-  clickMatchRow,
+  clickLeft,
+  clickRight,
   submitMatch,
   setMode,
   setAnswerFilter,
