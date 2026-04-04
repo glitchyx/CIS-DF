@@ -3,13 +3,6 @@
 
 A fully static, mobile-friendly practice test with **164 unique questions** covering all core exam objectives.
 
----
-
-## 🚀 Live Demo
-Once hosted on GitHub Pages: `https://YOUR-USERNAME.github.io/YOUR-REPO-NAME/`
-
----
-
 ## 📁 File Structure
 
 ```
@@ -31,45 +24,6 @@ Once hosted on GitHub Pages: `https://YOUR-USERNAME.github.io/YOUR-REPO-NAME/`
 | Change colors, fonts, layout | `css/style.css` |
 | Add a new feature | `js/app.js` |
 | Change page title or structure | `index.html` |
-
----
-
-## 🌐 How to Host on GitHub Pages
-
-### Step 1: Create a GitHub repository
-1. Go to [github.com](https://github.com) → Sign in → Click **"New"** repository
-2. Name it (e.g., `cis-cmdb-practice-test`)
-3. Set to **Public**
-4. Click **"Create repository"**
-
-### Step 2: Upload your files
-**Option A — GitHub web interface (easiest):**
-1. In your new repo, click **"uploading an existing file"**
-2. Drag and drop ALL files maintaining the folder structure:
-   - `index.html`
-   - `css/style.css`
-   - `data/questions.js`
-   - `js/app.js`
-3. Click **"Commit changes"**
-
-**Option B — Git command line:**
-```bash
-# In the folder containing index.html
-git init
-git add .
-git commit -m "Initial commit: CIS-CMDB practice test"
-git branch -M main
-git remote add origin https://github.com/YOUR-USERNAME/YOUR-REPO-NAME.git
-git push -u origin main
-```
-
-### Step 3: Enable GitHub Pages
-1. In your repo, go to **Settings** → **Pages** (left sidebar)
-2. Under **"Source"**, select **"Deploy from a branch"**
-3. Branch: **main**, Folder: **/ (root)**
-4. Click **Save**
-5. Wait ~2 minutes, then your site will be live at:
-   `https://YOUR-USERNAME.github.io/YOUR-REPO-NAME/`
 
 ---
 
@@ -109,51 +63,3 @@ correct: [0],
 Copy an existing question block, change the `id` to the next available number, and fill in the fields.
 
 ---
-
-## 🎮 Features
-
-| Feature | Description |
-|---|---|
-| 📚 Practice Mode | All 164 questions, instant feedback + explanations per question |
-| 🎯 Exam Mode | 75 random questions, 90-minute countdown, explanations shown after finishing |
-| 💾 Auto-save | Progress saved in browser localStorage — reload without losing progress |
-| 🔍 Jump to Q# | Jump directly to any question number |
-| 🏷️ Section Filter | Practice specific topic areas only |
-| ❌ Answer Filter | View All / Unanswered / Correct / Incorrect |
-| 📊 Section Breakdown | Results show performance per topic section |
-| 🌙 Dark/Light Theme | Toggle between themes |
-| 🔡 Font Size | Adjustable font size (A- / A+) |
-| 📋 Share Score | Copy score text to clipboard |
-| ↺ Restart | Reset all progress and start over |
-
----
-
-## 📚 Topics Covered
-
-- CMDB Governance & Data Manager
-- CMDB Health Dashboard
-- CI Class Manager
-- IRE & Identification Rules
-- CMDB 360 & Multisource
-- CMDB Data Ingestion
-- Asset & CI Synchronization
-- Duplicate CI Management
-- CMDB Workspace
-- CMDB Query Builder
-- CMDB Groups
-- CMDB Relationships
-- CMDB Business Value
-- CSDM Domains
-- CSDM Life Cycle
-- CSDM Maturity
-- Application Services
-
----
-
-## 🛠️ Technical Notes
-
-- **Pure static HTML/CSS/JS** — no server, no build step, no dependencies
-- **Google Fonts** loaded from CDN (requires internet)
-- **localStorage** used for progress persistence (browser-local, private)
-- Works on all modern browsers (Chrome, Firefox, Safari, Edge)
-- Fully responsive — works on mobile, tablet, and desktop
